@@ -28,16 +28,16 @@ jobs:
         with:
           go-version: ${{ env.GO_VERSION }}
 
-      - name: Install wails3
-        run: |
-          go install github.com/wailsapp/wails/v3/cmd/wails3@latest
-          echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
-
       - name: Install build dependencies (GTK4 / WebKitGTK 6.0)
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
             libgtk-4-dev libwebkitgtk-6.0-dev libjavascriptcoregtk-6.0-dev libsoup-3.0-dev
+
+      - name: Install wails3
+        run: |
+          go install github.com/wailsapp/wails/v3/cmd/wails3@latest
+          echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
 
       - name: Build frontend + bindings + Go binary
         run: |
