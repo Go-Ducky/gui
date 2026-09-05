@@ -25,7 +25,7 @@ sessions, and setup, wrapped in a Wails service the frontend calls directly.
 
 | Platform | Package |
 | --- | --- |
-| Linux (AppImage) | download `goducky-x86_64.AppImage` from [Releases](https://github.com/go-ducky/gui/releases), run it |
+| Linux (AppImage) | download `goducky-x86_64.AppImage` from [Releases](https://github.com/Go-Ducky/gui/releases), run it |
 | Linux (Debian/Ubuntu) | `sudo apt install ./goducky-<version>-amd64.deb` |
 | Linux (Fedora/RHEL) | `sudo dnf install goducky-<version>-x86_64.rpm` |
 | Linux (Arch) | `paru -S goducky` (AUR), or install the bundled `goducky-<version>-1-x86_64.pkg.tar.zst` |

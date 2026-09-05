@@ -12,7 +12,7 @@ priority: "extra"
 maintainer: ${GIT_COMMITTER_NAME} <${GIT_COMMITTER_EMAIL}>
 description: "GoDucky — AI coding agent, desktop edition"
 vendor: "GoDucky"
-homepage: "https://github.com/go-ducky/gui"
+homepage: "https://github.com/Go-Ducky/gui"
 license: "MIT"
 release: "1"
 
