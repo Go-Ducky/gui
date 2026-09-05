@@ -1,0 +1,52 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+env:
+  GO_VERSION: '1.27'
+  NODE_VERSION: '22'
+
+jobs:
+  build:
+    name: Build & vet
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+
+      - name: Install wails3
+        run: |
+          go install github.com/wailsapp/wails/v3/cmd/wails3@latest
+          echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
+
+      - name: Install build dependencies (GTK4 / WebKitGTK 6.0)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            libgtk-4-dev libwebkitgtk-6.0-dev libjavascriptcoregtk-6.0-dev libsoup-3.0-dev
+
+      - name: Build frontend + bindings + Go binary
+        run: |
+          (cd frontend && npm install)
+          wails3 generate bindings -ts -clean=true
+          wails3 task build
+
+      - name: Vet
+        run: go vet ./internal/...
+
+      - name: Type check frontend
+        run: (cd frontend && npx -y tsc --noEmit)

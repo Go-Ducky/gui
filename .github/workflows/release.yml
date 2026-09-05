@@ -1,0 +1,228 @@
+name: Release
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  GO_VERSION: '1.27'
+  NODE_VERSION: '22'
+
+jobs:
+  version:
+    name: Resolve version
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      tag: ${{ steps.version.outputs.tag }}
+      is_dev: ${{ steps.version.outputs.is_dev }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Determine version and tag
+        id: version
+        run: |
+          if [[ "${{ github.ref_type }}" == "tag" ]]; then
+            VERSION="${GITHUB_REF_NAME#v}"
+            TAG="${GITHUB_REF_NAME}"
+            IS_DEV="false"
+          else
+            SHORT="$(git rev-parse --short HEAD)"
+            BASE="$(cat VERSION 2>/dev/null || echo 0.1.0)"
+            VERSION="${BASE}-dev.${SHORT}"
+            TAG="dev-${SHORT}"
+            IS_DEV="true"
+          fi
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+          echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
+          echo "is_dev=${IS_DEV}" >> "$GITHUB_OUTPUT"
+
+  #############################################################################
+  # Linux: AppImage + DEB + RPM + Arch
+  #############################################################################
+  linux:
+    name: Package Linux
+    needs: version
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+
+      - name: Install wails3
+        run: |
+          go install github.com/wailsapp/wails/v3/cmd/wails3@latest
+          echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
+
+      - name: Install build dependencies (GTK4 / WebKitGTK 6.0)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            libgtk-4-dev libwebkitgtk-6.0-dev libjavascriptcoregtk-6.0-dev \
+            libsoup-3.0-dev libayatana-appindicator3-dev librsvg2-dev
+
+      - name: Build and package
+        run: wails3 task linux:package
+
+      - name: Collect artifacts
+        run: |
+          mkdir -p dist
+          cp bin/goducky "dist/goducky-linux-amd64"
+          if [ -f bin/*.AppImage ]; then cp bin/*.AppImage dist/; fi
+          if [ -f bin/goducky.deb ]; then cp bin/goducky.deb "dist/goducky-${VERSION}-amd64.deb"; fi
+          if [ -f bin/goducky.rpm ]; then cp bin/goducky.rpm "dist/goducky-${VERSION}-x86_64.rpm"; fi
+          if [ -f bin/goducky.pkg.tar.zst ]; then cp bin/goducky.pkg.tar.zst "dist/goducky-${VERSION}-1-x86_64.pkg.tar.zst"; fi
+          ls -la dist
+        env:
+          VERSION: ${{ needs.version.outputs.version }}
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist-linux
+          path: dist/*
+
+  #############################################################################
+  # macOS: DMG
+  #############################################################################
+  macos:
+    name: Package macOS
+    needs: version
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+
+      - name: Install wails3
+        run: |
+          go install github.com/wailsapp/wails/v3/cmd/wails3@latest
+          echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
+
+      - name: Build and package DMG
+        run: wails3 task darwin:package:dmg
+
+      - name: Collect artifacts
+        run: |
+          mkdir -p dist
+          cp bin/goducky "dist/goducky-darwin-universal"
+          if [ -f bin/goducky.dmg ]; then cp bin/goducky.dmg "dist/goducky-${VERSION}-universal.dmg"; fi
+          ls -la dist
+        env:
+          VERSION: ${{ needs.version.outputs.version }}
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist-macos
+          path: dist/*
+
+  #############################################################################
+  # Windows: EXE + NSIS installer
+  #############################################################################
+  windows:
+    name: Package Windows
+    needs: version
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+
+      - name: Install wails3
+        run: |
+          go install github.com/wailsapp/wails/v3/cmd/wails3@latest
+          echo "$(go env GOPATH)/bin" | Out-File -Append $env:GITHUB_PATH
+
+      - name: Install NSIS and MinGW
+        run: |
+          choco install nsis mingw -y
+
+      - name: Build and package NSIS installer
+        shell: bash
+        run: wails3 task windows:package
+
+      - name: Collect artifacts
+        shell: bash
+        run: |
+          mkdir -p dist
+          cp bin/goducky.exe "dist/goducky-windows-amd64.exe"
+          if [ -f build/windows/nsis/goducky-installer.exe ]; then
+            cp build/windows/nsis/goducky-installer.exe "dist/goducky-${VERSION}-setup.exe"
+          fi
+          ls -la dist
+        env:
+          VERSION: ${{ needs.version.outputs.version }}
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist-windows
+          path: dist/*
+
+  #############################################################################
+  # Combine, checksum, and publish the release
+  #############################################################################
+  publish:
+    name: Publish release
+    needs: [version, linux, macos, windows]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+
+      - name: Compute checksums
+        run: |
+          cd dist
+          sha256sum * > checksums.txt
+          cat checksums.txt
+
+      - name: Create or update release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ needs.version.outputs.tag }}
+          VERSION: ${{ needs.version.outputs.version }}
+          IS_DEV: ${{ needs.version.outputs.is_dev }}
+        run: |
+          set -euo pipefail
+          DESCRIPTION="GoDucky GUI v${VERSION}
+
+          Installers:
+          - Linux: AppImage, .deb, .rpm, Arch package
+          - macOS: .dmg
+          - Windows: setup.exe"
+          if gh release view "${TAG}" >/dev/null 2>&1; then
+            gh release edit "${TAG}" --notes "${DESCRIPTION}"
+          else
+            if [ "$IS_DEV" = "true" ]; then
+              gh release create "${TAG}" --title "Dev build ${VERSION}" --notes "${DESCRIPTION}" --prerelease
+            else
+              gh release create "${TAG}" --title "GoDucky GUI v${VERSION}" --notes "${DESCRIPTION}"
+            fi
+          fi
+          gh release upload "${TAG}" dist/* --clobber

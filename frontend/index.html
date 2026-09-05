@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>GoDucky</title>
+</head>
+<body>
+  <div id="app">
+    <aside id="sidebar">
+      <div class="brand">
+        <div class="brand-mark">🦆</div>
+        <div class="brand-name">GoDucky</div>
+        <button id="newChatBtn" class="icon-btn" title="New chat">＋</button>
+      </div>
+      <div id="sessionsList" class="sessions"></div>
+      <div class="sidebar-footer">
+        <button id="settingsBtn" class="foot-btn">⚙ Settings</button>
+        <div id="versionTag" class="version">…</div>
+      </div>
+    </aside>
+
+    <main id="main">
+      <header id="topbar">
+        <div id="workDirPill" class="pill" title="Working directory">📁 …</div>
+        <div class="topbar-spacer"></div>
+        <button id="providerBtn" class="chip">provider</button>
+        <button id="modelBtn" class="chip">model</button>
+        <button id="saveBtn" class="chip accent-btn" title="Save this chat">Save</button>
+      </header>
+
+      <div id="thread">
+        <div id="welcome" class="welcome" hidden>
+          <div class="welcome-title">🦆 GoDucky</div>
+          <div class="welcome-sub">Ask me to read, write, edit, search, and run commands in this folder.</div>
+        </div>
+      </div>
+
+      <div id="composer">
+        <textarea id="input" rows="1" placeholder="Ask GoDucky…  (Enter to send, Shift+Enter for a new line)"></textarea>
+        <button id="sendBtn" class="send-btn" title="Send">▲</button>
+        <button id="stopBtn" class="send-btn stop" title="Stop generating" hidden>■</button>
+      </div>
+      <div id="statusLine"></div>
+    </main>
+  </div>
+
+  <div id="modal-root" hidden></div>
+  <div id="toast-root"></div>
+  <script type="module" src="/src/main.ts"></script>
+</body>
+</html>

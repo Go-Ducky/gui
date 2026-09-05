@@ -1,0 +1,32 @@
+# Maintainer: GoDucky <goduckysupport@proton.me>
+
+pkgname=goducky
+pkgver=0.1.0
+pkgrel=1
+pkgdesc="GoDucky GUI - AI coding agent, desktop edition"
+arch=('x86_64' 'aarch64')
+url="https://github.com/go-ducky/gui"
+license=('MIT')
+depends=('gtk4' 'webkitgtk-6.0' 'libsoup3')
+conflicts=('goducky-gui-bin')
+provides=('goducky')
+source_x86_64=(
+    "goducky-linux-amd64::https://github.com/go-ducky/gui/releases/download/v${pkgver}/goducky-linux-amd64"
+    "goducky.desktop::https://raw.githubusercontent.com/go-ducky/gui/v${pkgver}/build/linux/goducky.desktop"
+    "appicon.png::https://raw.githubusercontent.com/go-ducky/gui/v${pkgver}/build/appicon.png"
+)
+source_aarch64=(
+    "goducky-linux-arm64::https://github.com/go-ducky/gui/releases/download/v${pkgver}/goducky-linux-arm64"
+    "goducky.desktop::https://raw.githubusercontent.com/go-ducky/gui/v${pkgver}/build/linux/goducky.desktop"
+    "appicon.png::https://raw.githubusercontent.com/go-ducky/gui/v${pkgver}/build/appicon.png"
+)
+sha256sums_x86_64=('REPLACE_WITH_LINUX_AMD64_SHA256' 'REPLACE_WITH_DESKTOP_SHA256' 'REPLACE_WITH_ICON_SHA256')
+sha256sums_aarch64=('REPLACE_WITH_LINUX_ARM64_SHA256' 'REPLACE_WITH_DESKTOP_SHA256' 'REPLACE_WITH_ICON_SHA256')
+
+package() {
+    local goarch="amd64"
+    [[ "$CARCH" == "aarch64" ]] && goarch="arm64"
+    install -Dm755 "${srcdir}/goducky-linux-${goarch}" "${pkgdir}/usr/bin/goducky"
+    install -Dm644 "${srcdir}/goducky.desktop" "${pkgdir}/usr/share/applications/goducky.desktop"
+    install -Dm644 "${srcdir}/appicon.png" "${pkgdir}/usr/share/icons/hicolor/128x128/apps/goducky.png"
+}
