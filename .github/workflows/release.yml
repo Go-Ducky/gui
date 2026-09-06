@@ -45,10 +45,10 @@ jobs:
           echo "is_dev=${IS_DEV}" >> "$GITHUB_OUTPUT"
 
   #############################################################################
-  # Linux: native GTK4 binary (amd64)
+  # Linux: native GTK4 binary + AppImage, .deb, .rpm, Arch pkg, tarball
   #############################################################################
   linux:
-    name: Package Linux (GTK4)
+    name: Package Linux (GTK4) - AppImage/deb/rpm/arch
     needs: version
     runs-on: ubuntu-24.04
     # Arch rolling image: glib exposes the symbols gotk4 needs as real
@@ -67,13 +67,80 @@ jobs:
       - name: Install GTK4 build dependencies
         run: |
           pacman -Syu --noconfirm --needed \
-            base-devel git glib2 gobject-introspection gtk4
+            base-devel git curl glib2 gobject-introspection gtk4
 
       - name: Build native GTK4 binary
         run: |
           go build -tags gtk -trimpath -ldflags "-s -w" -o bin/goducky-linux-amd64 .
 
-      - name: Assemble release tarball
+      - name: Install nfpm
+        run: |
+          go install github.com/goreleaser/nfpm/v2/cmd/nfpm@latest
+
+      - name: Package .deb, .rpm and Arch pkg
+        run: |
+          mkdir -p dist
+          cat > /tmp/nfpm.yaml <<EOF
+          name: goducky
+          arch: amd64
+          platform: linux
+          version: ${VERSION}
+          release: 1
+          description: "GoDucky GUI - AI coding agent, desktop edition"
+          homepage: "https://github.com/Go-Ducky/gui"
+          maintainer: "GoDucky <goducky@users.noreply.github.com>"
+          vendor: "GoDucky"
+          license: "MIT"
+          section: "default"
+          priority: "extra"
+          contents:
+            - src: bin/goducky-linux-amd64
+              dst: /usr/bin/goducky
+              file_info:
+                mode: 0755
+            - src: packaging/linux/goducky.desktop
+              dst: /usr/share/applications/goducky.desktop
+              file_info:
+                mode: 0644
+            - src: packaging/linux/goducky.png
+              dst: /usr/share/icons/hicolor/128x128/apps/goducky.png
+              file_info:
+                mode: 0644
+          overrides:
+            deb:
+              depends:
+                - libgtk-4-1
+                - libgirepository-1.0-1
+            rpm:
+              requires:
+                - gtk4
+          EOF
+          nfpm pkg --config /tmp/nfpm.yaml --target "dist/goducky_${VERSION}_amd64.deb" --packager deb
+          nfpm pkg --config /tmp/nfpm.yaml --target "dist/goducky-${VERSION}-1.x86_64.rpm" --packager rpm
+          nfpm pkg --config /tmp/nfpm.yaml --target "dist/goducky-${VERSION}-1-x86_64.pkg.tar.zst" --packager arch
+          ls -la dist
+        env:
+          VERSION: ${{ needs.version.outputs.version }}
+
+      - name: Build AppImage
+        run: |
+          mkdir -p AppDir/usr/share/applications AppDir/usr/share/icons/hicolor/128x128/apps
+          install -m755 bin/goducky-linux-amd64 AppDir/usr/bin/goducky
+          install -m644 packaging/linux/goducky.desktop AppDir/usr/share/applications/goducky.desktop
+          install -m644 packaging/linux/goducky.png AppDir/usr/share/icons/hicolor/128x128/apps/goducky.png
+          cp packaging/linux/goducky.desktop AppDir/goducky.desktop
+          cp packaging/linux/goducky.png AppDir/goducky.png
+          printf '#!/bin/sh\nSELF="$(readlink -f "$0")"\nHERE="${SELF%/*}"\nexec "${HERE}/usr/bin/goducky" "$@"\n' > AppDir/AppRun
+          chmod +x AppDir/AppRun
+          curl -sL -o appimagetool \
+            https://github.com/AppImageCommunity/appimagetool/releases/download/continuous/appimagetool-x86_64.AppImage
+          chmod +x appimagetool
+          ARCH=x86_64 ./appimagetool --appimage-extract-and-run AppDir "dist/goducky-${VERSION}-x86_64.AppImage"
+          ls -la dist
+        env:
+          VERSION: ${{ needs.version.outputs.version }}
+
+      - name: Assemble tarball and raw binary
         run: |
           mkdir -p dist/stage/usr/bin dist/stage/usr/share/applications dist/stage/usr/share/icons/hicolor/128x128/apps
           install -m755 bin/goducky-linux-amd64 dist/stage/usr/bin/goducky
@@ -120,11 +187,12 @@ jobs:
           set -euo pipefail
           DESCRIPTION="GoDucky GUI v${VERSION}
 
-          Native Linux build (GTK4). Build with -tags qt for the Qt 6 frontend.
-          The tarball unpacks into /usr (usr/bin/goducky, .desktop, icon).
+          Native Linux build (GTK4), branded with the GoDucky logo:
+          - AppImage, .deb, .rpm, Arch pkg and tarball (unpacks into /usr)
+          - Build with -tags qt for the Qt 6 frontend
 
-          macOS (Cocoa) and Windows (Win32) installers resume once those native
-          backends ship."
+          Windows (Win32) and macOS (Cocoa) installers will appear once
+          those native backends ship."
           gh release view "${TAG}" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1 && EXISTS=1 || EXISTS=0
           if [ "$EXISTS" = "1" ]; then
             gh release edit "${TAG}" --repo "$GITHUB_REPOSITORY" --notes "${DESCRIPTION}"
