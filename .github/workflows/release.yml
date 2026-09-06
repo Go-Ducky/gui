@@ -81,6 +81,7 @@ jobs:
           install -m644 packaging/linux/goducky.png dist/stage/usr/share/icons/hicolor/128x128/apps/goducky.png
           cp bin/goducky-linux-amd64 "dist/goducky-linux-amd64"
           tar -C dist/stage -czf "dist/goducky-${VERSION}-linux-x86_64.tar.gz" usr
+          rm -rf dist/stage
           ls -la dist
         env:
           VERSION: ${{ needs.version.outputs.version }}
