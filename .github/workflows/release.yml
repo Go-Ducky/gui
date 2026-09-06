@@ -132,8 +132,8 @@ jobs:
           cp packaging/linux/goducky.desktop AppDir/goducky.desktop
           cp packaging/linux/goducky.png AppDir/goducky.png
           install -m755 packaging/linux/AppRun AppDir/AppRun
-          curl -sL -o appimagetool \
-            https://github.com/AppImageCommunity/appimagetool/releases/download/continuous/appimagetool-x86_64.AppImage
+          curl -fsSL -o appimagetool \
+            https://github.com/AppImage/appimagetool/releases/download/continuous/appimagetool-x86_64.AppImage
           chmod +x appimagetool
           ARCH=x86_64 ./appimagetool --appimage-extract-and-run AppDir "dist/goducky-${VERSION}-x86_64.AppImage"
           ls -la dist
