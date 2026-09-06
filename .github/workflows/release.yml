@@ -158,13 +158,17 @@ jobs:
           go install github.com/wailsapp/wails/v3/cmd/wails3@latest
           echo "$(go env GOPATH)/bin" | Out-File -Append $env:GITHUB_PATH
 
-      - name: Install NSIS and MinGW
-        run: |
-          choco install nsis mingw -y
+      - name: Install MinGW
+        run: choco install mingw -y --no-progress
 
-      - name: Add NSIS to PATH
+      - name: Install NSIS
         shell: bash
-        run: echo 'C:\Program Files (x86)\NSIS' >> "$GITHUB_PATH"
+        run: |
+          curl -fL --retry 5 -o "$RUNNER_TEMP/nsis.zip" \
+            "https://sourceforge.net/projects/nsis/files/NSIS%203/3.12/nsis-3.12.zip/download"
+          mkdir -p "$RUNNER_TEMP/nsis"
+          unzip -q "$RUNNER_TEMP/nsis.zip" -d "$RUNNER_TEMP/nsis"
+          echo "$RUNNER_TEMP/nsis/nsis-3.12" >> "$GITHUB_PATH"
 
       - name: Build and package NSIS installer
         shell: bash
