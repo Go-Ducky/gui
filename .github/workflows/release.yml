@@ -165,14 +165,18 @@ jobs:
       - name: Build and package NSIS installer
         shell: bash
         run: wails3 task windows:package
+        env:
+          # choco's PATH changes aren't visible to this bash step; NSIS installs
+          # to this fixed location on Windows runners.
+          PATH: 'C:\Program Files (x86)\NSIS:${{ env.PATH }}'
 
       - name: Collect artifacts
         shell: bash
         run: |
           mkdir -p dist
           cp bin/goducky.exe "dist/goducky-windows-amd64.exe"
-          if [ -f build/windows/nsis/goducky-installer.exe ]; then
-            cp build/windows/nsis/goducky-installer.exe "dist/goducky-${VERSION}-setup.exe"
+          if [ -f bin/goducky-amd64-installer.exe ]; then
+            cp bin/goducky-amd64-installer.exe "dist/goducky-${VERSION}-setup.exe"
           fi
           ls -la dist
         env:
