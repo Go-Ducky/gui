@@ -125,7 +125,7 @@ jobs:
 
       - name: Build AppImage
         run: |
-          mkdir -p AppDir/usr/bin AppDir/usr/share/applications AppDir/usr/share/icons/hicolor/128x128/apps
+          mkdir -p dist AppDir/usr/bin AppDir/usr/share/applications AppDir/usr/share/icons/hicolor/128x128/apps
           install -m755 bin/goducky-linux-amd64 AppDir/usr/bin/goducky
           install -m644 packaging/linux/goducky.desktop AppDir/usr/share/applications/goducky.desktop
           install -m644 packaging/linux/goducky.png AppDir/usr/share/icons/hicolor/128x128/apps/goducky.png
