@@ -1,0 +1,27 @@
+pkgbase = goducky
+	pkgdesc = GoDucky GUI - AI coding agent, desktop edition
+	pkgver = 0.1.0
+	pkgrel = 1
+	url = https://github.com/Go-Ducky/gui
+	arch = x86_64
+	arch = aarch64
+	license = MIT
+	depends = gtk4
+	depends = webkitgtk-6.0
+	depends = libsoup3
+	conflicts = goducky-gui-bin
+	provides = goducky
+	source_x86_64 = goducky-linux-amd64::https://github.com/Go-Ducky/gui/releases/download/v${pkgver}/goducky-linux-amd64
+	source_x86_64 = goducky.desktop::https://raw.githubusercontent.com/Go-Ducky/gui/v${pkgver}/build/linux/goducky.desktop
+	source_x86_64 = appicon.png::https://raw.githubusercontent.com/Go-Ducky/gui/v${pkgver}/build/appicon.png
+	source_aarch64 = goducky-linux-arm64::https://github.com/Go-Ducky/gui/releases/download/v${pkgver}/goducky-linux-arm64
+	source_aarch64 = goducky.desktop::https://raw.githubusercontent.com/Go-Ducky/gui/v${pkgver}/build/linux/goducky.desktop
+	source_aarch64 = appicon.png::https://raw.githubusercontent.com/Go-Ducky/gui/v${pkgver}/build/appicon.png
+	sha256sums_x86_64 = 2806548ccaa4a7b7d40d4b06fcd32bf5d0b045de0534bd3f0e7e10ba979c235b
+	sha256sums_x86_64 = c21f18b89a4bc5cbf2d6bb2076f02209dec0aa7fbaeb28cc3fb370655954081d
+	sha256sums_x86_64 = 22afff98cedc9cc051aba69e55af11be41b12a5dbb12e10b304b41fe6500c87c
+	sha256sums_aarch64 = REPLACE_WITH_LINUX_ARM64_SHA256
+	sha256sums_aarch64 = c21f18b89a4bc5cbf2d6bb2076f02209dec0aa7fbaeb28cc3fb370655954081d
+	sha256sums_aarch64 = 22afff98cedc9cc051aba69e55af11be41b12a5dbb12e10b304b41fe6500c87c
+
+pkgname = goducky
