@@ -162,13 +162,13 @@ jobs:
         run: |
           choco install nsis mingw -y
 
+      - name: Add NSIS to PATH
+        shell: bash
+        run: echo 'C:\Program Files (x86)\NSIS' >> "$GITHUB_PATH"
+
       - name: Build and package NSIS installer
         shell: bash
         run: wails3 task windows:package
-        env:
-          # choco's PATH changes aren't visible to this bash step; NSIS installs
-          # to this fixed location on Windows runners.
-          PATH: 'C:\Program Files (x86)\NSIS:${{ env.PATH }}'
 
       - name: Collect artifacts
         shell: bash
