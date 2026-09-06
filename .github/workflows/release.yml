@@ -224,13 +224,14 @@ jobs:
           - Linux: AppImage, .deb, .rpm, Arch package
           - macOS: .dmg
           - Windows: setup.exe"
-          if gh release view "${TAG}" >/dev/null 2>&1; then
-            gh release edit "${TAG}" --notes "${DESCRIPTION}"
+          gh release view "${TAG}" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1 && EXISTS=1 || EXISTS=0
+          if [ "$EXISTS" = "1" ]; then
+            gh release edit "${TAG}" --repo "$GITHUB_REPOSITORY" --notes "${DESCRIPTION}"
           else
             if [ "$IS_DEV" = "true" ]; then
-              gh release create "${TAG}" --title "Dev build ${VERSION}" --notes "${DESCRIPTION}" --prerelease
+              gh release create "${TAG}" --repo "$GITHUB_REPOSITORY" --title "Dev build ${VERSION}" --notes "${DESCRIPTION}" --prerelease
             else
-              gh release create "${TAG}" --title "GoDucky GUI v${VERSION}" --notes "${DESCRIPTION}"
+              gh release create "${TAG}" --repo "$GITHUB_REPOSITORY" --title "GoDucky GUI v${VERSION}" --notes "${DESCRIPTION}"
             fi
           fi
-          gh release upload "${TAG}" dist/* --clobber
+          gh release upload "${TAG}" --repo "$GITHUB_REPOSITORY" dist/* --clobber
