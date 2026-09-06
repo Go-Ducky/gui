@@ -31,6 +31,8 @@ jobs:
 
       - name: Install build dependencies (GTK4 + Qt 6)
         run: |
+          pacman-key --init
+          pacman-key --populate archlinux
           pacman -Syu --noconfirm --needed \
             base-devel git glib2 gobject-introspection gtk4 qt6-base
 

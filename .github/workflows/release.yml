@@ -66,6 +66,8 @@ jobs:
 
       - name: Install GTK4 build dependencies
         run: |
+          pacman-key --init
+          pacman-key --populate archlinux
           pacman -Syu --noconfirm --needed \
             base-devel git curl glib2 gobject-introspection gtk4
 
@@ -112,7 +114,7 @@ jobs:
                 - libgtk-4-1
                 - libgirepository-1.0-1
             rpm:
-              requires:
+              depends:
                 - gtk4
           EOF
           nfpm pkg --config /tmp/nfpm.yaml --target "dist/goducky_${VERSION}_amd64.deb" --packager deb
