@@ -21,7 +21,7 @@ source_aarch64=(
     "goducky.desktop::https://raw.githubusercontent.com/Go-Ducky/gui/v${pkgver}/packaging/linux/goducky.desktop"
     "goducky.png::https://raw.githubusercontent.com/Go-Ducky/gui/v${pkgver}/packaging/linux/goducky.png"
 )
-sha256sums_x86_64=('REPLACE_WITH_LINUX_AMD64_SHA256' '98e58c3d245e9ae93c8854aa756a7f6880e732e4d7e5385c18067efe98ab3e3b' 'd5e68ee324827661f74a11166bf5329699afd2836bf0d56fdb9061d936c897cd')
+sha256sums_x86_64=('0b9175eea87b2c250b8d972645ad451f2551be9d12ac45a94fe0d90b9dd465cc' '98e58c3d245e9ae93c8854aa756a7f6880e732e4d7e5385c18067efe98ab3e3b' 'd5e68ee324827661f74a11166bf5329699afd2836bf0d56fdb9061d936c897cd')
 sha256sums_aarch64=('REPLACE_WITH_LINUX_ARM64_SHA256' '98e58c3d245e9ae93c8854aa756a7f6880e732e4d7e5385c18067efe98ab3e3b' 'd5e68ee324827661f74a11166bf5329699afd2836bf0d56fdb9061d936c897cd')
 
 package() {
