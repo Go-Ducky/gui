@@ -131,13 +131,7 @@ jobs:
           install -m644 packaging/linux/goducky.png AppDir/usr/share/icons/hicolor/128x128/apps/goducky.png
           cp packaging/linux/goducky.desktop AppDir/goducky.desktop
           cp packaging/linux/goducky.png AppDir/goducky.png
-          cat > AppDir/AppRun <<'EOS'
-#!/bin/sh
-SELF="$(readlink -f "$0")"
-HERE="${SELF%/*}"
-exec "${HERE}/usr/bin/goducky" "$@"
-EOS
-          chmod +x AppDir/AppRun
+          install -m755 packaging/linux/AppRun AppDir/AppRun
           curl -sL -o appimagetool \
             https://github.com/AppImageCommunity/appimagetool/releases/download/continuous/appimagetool-x86_64.AppImage
           chmod +x appimagetool
