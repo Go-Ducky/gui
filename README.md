@@ -1,16 +1,12 @@
-<<<<<<< HEAD
-# gui
-GoDucky GUI Application
-=======
 # GoDucky GUI 🦆
 
 The desktop edition of [GoDucky](https://github.com/Go-Ducky/cli) — an AI coding
 agent that reads, writes, edits, searches, and runs commands in a project folder.
-This is a modern chat desktop app (like opencode) for Linux, macOS, and Windows,
-powered by [Wails v3](https://v3.wails.io/).
+A chat desktop app built with **native toolkits** (no webview runtime).
 
 The backend reuses the exact same runtime as the CLI: agent tool loop, providers,
-sessions, and setup, wrapped in a Wails service the frontend calls directly.
+sessions, and setup, exposed through a UI-agnostic engine
+(`internal/native`) that any frontend can drive.
 
 ## Features
 
@@ -19,54 +15,54 @@ sessions, and setup, wrapped in a Wails service the frontend calls directly.
 - Providers: Ollama (local), Groq, OpenAI, OpenAI-compatible, Anthropic, Gemini, OpenRouter
 - Onboarding wizard: run fully local with Ollama or use a cloud API key
 - Working-directory picker, provider/model switchers, and settings inline
-- Cross-platform installers built entirely in GitHub Actions
+- Theming: light / dark / system
+
+## Frontends
+
+| Frontend | Toolkit | Build tag |
+| --- | --- | --- |
+| GTK4 | gotk4 (`diamondburned/gotk4`) | `gtk` |
+| Qt 6 | miqt (`mappu/miqt`) | `qt` |
+| Cocoa (macOS) | planned | — |
+| Win32 (Windows) | planned | — |
 
 ## Install
 
 | Platform | Package |
 | --- | --- |
-| Linux (AppImage) | download `goducky-x86_64.AppImage` from [Releases](https://github.com/Go-Ducky/gui/releases), run it |
-| Linux (Debian/Ubuntu) | `sudo apt install ./goducky-<version>-amd64.deb` |
-| Linux (Fedora/RHEL) | `sudo dnf install goducky-<version>-x86_64.rpm` |
-| Linux (Arch) | `paru -S goducky` (AUR), or install the bundled `goducky-<version>-1-x86_64.pkg.tar.zst` |
-| macOS | download `goducky-<version>-universal.dmg` |
-| Windows | download `goducky-<version>-setup.exe` |
+| Linux (Arch) | `paru -S goducky` (AUR), or the release tarball |
+| Linux (GTK4) | `goducky-linux-amd64` from [Releases](https://github.com/Go-Ducky/gui/releases), or the `.tar.gz` (unpacks into `/usr`) |
+
+macOS and Windows installers resume once the Cocoa and Win32 backends land.
 
 ## Build from source
 
-Requirements: Go 1.25+, Node.js (or bun), and a C toolchain with the
-[Wails Linux/macOS/Windows system libraries](https://v3.wails.io/getting-started/installation/).
+Requirements: Go 1.27+, a C toolchain, and the GTK4 or Qt 6 dev libraries
+(e.g. on Arch: `gtk4` or `qt6-base`).
 
 ```sh
-go install github.com/wailsapp/wails/v3/cmd/wails3@latest
+task build:gtk   # or: go build -tags gtk -o bin/goducky .
+task run:gtk
 
-wails3 task build    # production binary in bin/
-wails3 dev           # hot-reload development mode
-```
-
-Installers per platform:
-
-```sh
-wails3 task linux:package      # AppImage + .deb + .rpm + Arch pkg
-wails3 task darwin:package:dmg # macOS .dmg
-wails3 task windows:package    # Windows NSIS setup.exe
+task build:qt    # or: go build -tags qt -o bin/goducky .
+task run:qt
 ```
 
 ## Releases
 
 Pushing to `main` builds a `dev-<sha>` prerelease; pushing a `v*` tag builds a
-proper release. Each release ships binaries and installers for all platforms.
+proper release. Releases currently ship the native GTK4 Linux binary and a
+tarball.
 
 ## Project structure
 
-- `main.go` — Wails app setup (window, closing auto-save)
-- `internal/guiservice/` — the bound backend that wraps the agent runtime
+- `internal/guiservice/` — the shared backend that wraps the agent runtime
+- `internal/native/` — UI-agnostic engine plus GTK4 and Qt 6 frontends
 - `internal/{agent,provider,config,session,setup}` — shared with the CLI
-- `frontend/` — TypeScript + Vite chat UI
-- `build/` — Wails per-OS packaging (config, nfpm, AppImage, NSIS, DMG)
+- `packaging/linux/` — .desktop entry and app icon
+- `packaging/aur/` — AUR PKGBUILD
 - `.github/workflows/` — CI + release pipeline
 
 ## License
 
 MIT
->>>>>>> 0ee89dc (GoDucky GUI: Wails v3 chat desktop app for the GoDucky agent)

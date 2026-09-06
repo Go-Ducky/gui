@@ -1,65 +1,36 @@
 version: '3'
 
 vars:
-  APP_NAME: "goducky"
-  BIN_DIR: "bin"
-  PACKAGE_MANAGER: '{{.PACKAGE_MANAGER | default "npm"}}'
-  VITE_PORT: '{{.WAILS_VITE_PORT | default 9245}}'
-  # Target OS for build/package/run. Defaults to the host OS, and is overridden
-  # by `wails3 build GOOS=...` (or the GOOS env var) for cross-compilation. The
-  # tasks below dispatch to the matching platform Taskfile via this variable.
-  GOOS: '{{.GOOS | default OS}}'
-
-includes:
-  common: ./build/Taskfile.yml
-  windows: ./build/windows/Taskfile.yml
-  darwin: ./build/darwin/Taskfile.yml
-  linux: ./build/linux/Taskfile.yml
-  ios: ./build/ios/Taskfile.yml
-  android: ./build/android/Taskfile.yml
+  TAGS_GTK: 'gtk'
+  TAGS_QT: 'qt'
 
 tasks:
-  build:
-    summary: Builds the application
+  build:gtk:
+    desc: Build the native GTK4 app
     cmds:
-      - task: "{{.GOOS}}:build"
+      - go build -tags gtk -o bin/goducky-gtk .
 
-  package:
-    summary: Packages a production build of the application
+  build:qt:
+    desc: Build the native Qt 6 app
     cmds:
-      - task: "{{.GOOS}}:package"
+      - go build -tags qt -o bin/goducky-qt .
 
-  run:
-    summary: Runs the application
+  run:gtk:
+    desc: Build and run the GTK4 app
     cmds:
-      - task: "{{.GOOS}}:run"
+      - go run -tags gtk .
 
-  dev:
-    summary: Runs the application in development mode
+  run:qt:
+    desc: Build and run the Qt 6 app
     cmds:
-      - wails3 dev -config ./build/config.yml -port {{.VITE_PORT}}
+      - go run -tags qt .
 
-  setup:docker:
-    summary: Builds Docker image for cross-compilation (~800MB download)
+  vet:
+    desc: Run go vet
     cmds:
-      - task: common:setup:docker
+      - go vet ./internal/...
 
-  build:server:
-    summary: Builds the application in server mode (no GUI, HTTP server only)
+  fmt:
+    desc: Format all Go sources
     cmds:
-      - task: common:build:server
-
-  run:server:
-    summary: Runs the application in server mode
-    cmds:
-      - task: common:run:server
-
-  build:docker:
-    summary: Builds a Docker image for server mode deployment
-    cmds:
-      - task: common:build:docker
-
-  run:docker:
-    summary: Builds and runs the Docker image
-    cmds:
-      - task: common:run:docker
+      - gofmt -w .

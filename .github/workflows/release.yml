@@ -15,7 +15,6 @@ concurrency:
 
 env:
   GO_VERSION: '1.27'
-  NODE_VERSION: '22'
 
 jobs:
   version:
@@ -46,46 +45,37 @@ jobs:
           echo "is_dev=${IS_DEV}" >> "$GITHUB_OUTPUT"
 
   #############################################################################
-  # Linux: AppImage + DEB + RPM + Arch
+  # Linux: native GTK4 binary (amd64)
   #############################################################################
   linux:
-    name: Package Linux
+    name: Package Linux (GTK4)
     needs: version
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
 
       - uses: actions/setup-go@v5
         with:
           go-version: ${{ env.GO_VERSION }}
 
-      - name: Install build dependencies (GTK4 / WebKitGTK 6.0)
+      - name: Install GTK4 build dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
-            libgtk-4-dev libwebkitgtk-6.0-dev libjavascriptcoregtk-6.0-dev \
-            libsoup-3.0-dev libayatana-appindicator3-dev librsvg2-dev
+            libgtk-4-dev libgdk-pixbuf-2.0-dev
 
-      - name: Install wails3
+      - name: Build native GTK4 binary
         run: |
-          go install github.com/wailsapp/wails/v3/cmd/wails3@latest
-          echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
+          go build -tags gtk -trimpath -ldflags "-s -w" -o bin/goducky-linux-amd64 .
 
-      - name: Build and package
-        run: wails3 task linux:package
-
-      - name: Collect artifacts
+      - name: Assemble release tarball
         run: |
-          mkdir -p dist
-          cp bin/goducky "dist/goducky-linux-amd64"
-          if [ -f bin/*.AppImage ]; then cp bin/*.AppImage dist/; fi
-          if [ -f bin/goducky.deb ]; then cp bin/goducky.deb "dist/goducky-${VERSION}-amd64.deb"; fi
-          if [ -f bin/goducky.rpm ]; then cp bin/goducky.rpm "dist/goducky-${VERSION}-x86_64.rpm"; fi
-          if [ -f bin/goducky.pkg.tar.zst ]; then cp bin/goducky.pkg.tar.zst "dist/goducky-${VERSION}-1-x86_64.pkg.tar.zst"; fi
+          mkdir -p dist/stage/usr/bin dist/stage/usr/share/applications dist/stage/usr/share/icons/hicolor/128x128/apps
+          install -m755 bin/goducky-linux-amd64 dist/stage/usr/bin/goducky
+          install -m644 packaging/linux/goducky.desktop dist/stage/usr/share/applications/goducky.desktop
+          install -m644 packaging/linux/goducky.png dist/stage/usr/share/icons/hicolor/128x128/apps/goducky.png
+          cp bin/goducky-linux-amd64 "dist/goducky-linux-amd64"
+          tar -C dist/stage -czf "dist/goducky-${VERSION}-linux-x86_64.tar.gz" usr
           ls -la dist
         env:
           VERSION: ${{ needs.version.outputs.version }}
@@ -96,107 +86,11 @@ jobs:
           path: dist/*
 
   #############################################################################
-  # macOS: DMG
-  #############################################################################
-  macos:
-    name: Package macOS
-    needs: version
-    runs-on: macos-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-
-      - uses: actions/setup-go@v5
-        with:
-          go-version: ${{ env.GO_VERSION }}
-
-      - name: Install wails3
-        run: |
-          go install github.com/wailsapp/wails/v3/cmd/wails3@latest
-          echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
-
-      - name: Build and package DMG
-        run: wails3 task darwin:package:dmg
-
-      - name: Collect artifacts
-        run: |
-          mkdir -p dist
-          cp bin/goducky "dist/goducky-darwin-universal"
-          if [ -f bin/goducky.dmg ]; then cp bin/goducky.dmg "dist/goducky-${VERSION}-universal.dmg"; fi
-          ls -la dist
-        env:
-          VERSION: ${{ needs.version.outputs.version }}
-
-      - uses: actions/upload-artifact@v4
-        with:
-          name: dist-macos
-          path: dist/*
-
-  #############################################################################
-  # Windows: EXE + NSIS installer
-  #############################################################################
-  windows:
-    name: Package Windows
-    needs: version
-    runs-on: windows-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-
-      - uses: actions/setup-go@v5
-        with:
-          go-version: ${{ env.GO_VERSION }}
-
-      - name: Install wails3
-        run: |
-          go install github.com/wailsapp/wails/v3/cmd/wails3@latest
-          echo "$(go env GOPATH)/bin" | Out-File -Append $env:GITHUB_PATH
-
-      - name: Install MinGW
-        run: choco install mingw -y --no-progress
-
-      - name: Install NSIS
-        shell: bash
-        run: |
-          curl -fL --retry 5 -o "$RUNNER_TEMP/nsis.zip" \
-            "https://sourceforge.net/projects/nsis/files/NSIS%203/3.12/nsis-3.12.zip/download"
-          mkdir -p "$RUNNER_TEMP/nsis"
-          unzip -q "$RUNNER_TEMP/nsis.zip" -d "$RUNNER_TEMP/nsis"
-          echo "$RUNNER_TEMP/nsis/nsis-3.12" >> "$GITHUB_PATH"
-
-      - name: Build and package NSIS installer
-        shell: bash
-        run: wails3 task windows:package
-
-      - name: Collect artifacts
-        shell: bash
-        run: |
-          mkdir -p dist
-          cp bin/goducky.exe "dist/goducky-windows-amd64.exe"
-          if [ -f bin/goducky-amd64-installer.exe ]; then
-            cp bin/goducky-amd64-installer.exe "dist/goducky-${VERSION}-setup.exe"
-          fi
-          ls -la dist
-        env:
-          VERSION: ${{ needs.version.outputs.version }}
-
-      - uses: actions/upload-artifact@v4
-        with:
-          name: dist-windows
-          path: dist/*
-
-  #############################################################################
   # Combine, checksum, and publish the release
   #############################################################################
   publish:
     name: Publish release
-    needs: [version, linux, macos, windows]
+    needs: [version, linux]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/download-artifact@v4
@@ -220,10 +114,11 @@ jobs:
           set -euo pipefail
           DESCRIPTION="GoDucky GUI v${VERSION}
 
-          Installers:
-          - Linux: AppImage, .deb, .rpm, Arch package
-          - macOS: .dmg
-          - Windows: setup.exe"
+          Native Linux build (GTK4). Build with -tags qt for the Qt 6 frontend.
+          The tarball unpacks into /usr (usr/bin/goducky, .desktop, icon).
+
+          macOS (Cocoa) and Windows (Win32) installers resume once those native
+          backends ship."
           gh release view "${TAG}" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1 && EXISTS=1 || EXISTS=0
           if [ "$EXISTS" = "1" ]; then
             gh release edit "${TAG}" --repo "$GITHUB_REPOSITORY" --notes "${DESCRIPTION}"

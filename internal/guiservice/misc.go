@@ -1,11 +1,15 @@
 package guiservice
 
 import (
+	"errors"
 	"fmt"
 	"os/exec"
 	"runtime"
+	"strings"
 	"time"
 
+	"github.com/go-ducky/gui/internal/provider"
+	"github.com/go-ducky/gui/internal/session"
 	"github.com/go-ducky/gui/internal/setup"
 )
 
@@ -30,6 +34,80 @@ func (s *Service) OpenURL(url string) error {
 		return fmt.Errorf("could not open browser: %w", err)
 	}
 	return nil
+}
+
+// CopyText copies plain text to the system clipboard (used by share/export).
+func (s *Service) CopyText(text string) error {
+	if strings.TrimSpace(text) == "" {
+		return errors.New("nothing to copy")
+	}
+	var cmd *exec.Cmd
+	switch runtime.GOOS {
+	case "darwin":
+		cmd = exec.Command("pbcopy")
+	case "windows":
+		cmd = exec.Command("cmd", "/c", "clip")
+	default:
+		if _, err := exec.LookPath("xclip"); err == nil {
+			cmd = exec.Command("xclip", "-selection", "clipboard")
+		} else {
+			cmd = exec.Command("wl-copy")
+		}
+	}
+	cmd.Stdin = strings.NewReader(text)
+	if out, err := cmd.CombinedOutput(); err != nil {
+		return fmt.Errorf("clipboard copy failed: %w (%s)", err, strings.TrimSpace(string(out)))
+	}
+	return nil
+}
+
+// ShareSession copies a saved (or the current) conversation to the clipboard
+// as a Markdown transcript. An empty name shares the active chat.
+func (s *Service) ShareSession(name string) error {
+	md, err := s.sessionMarkdown(name)
+	if err != nil {
+		return err
+	}
+	if err := s.CopyText(md); err != nil {
+		return err
+	}
+	s.emit(EvtStatus, map[string]any{"msg": "Conversation copied to clipboard"})
+	return nil
+}
+
+func (s *Service) sessionMarkdown(name string) (string, error) {
+	name = strings.TrimSpace(name)
+	var msgs []provider.Message
+	if name == "" {
+		s.mu.Lock()
+		msgs = make([]provider.Message, len(s.messages))
+		copy(msgs, s.messages)
+		s.mu.Unlock()
+	} else {
+		ss, err := session.Load(name)
+		if err != nil {
+			return "", err
+		}
+		msgs = ss.Messages
+	}
+	if len(msgs) == 0 {
+		return "", errors.New("this chat is empty")
+	}
+	b := &strings.Builder{}
+	b.WriteString("# GoDucky conversation\n\n")
+	for _, m := range msgs {
+		who := "GoDucky"
+		if m.Role == provider.RoleUser {
+			who = "You"
+		}
+		b.WriteString("## " + who + "\n\n")
+		for _, c := range m.Content {
+			if c.Type == "text" && c.Text != "" {
+				b.WriteString(c.Text + "\n\n")
+			}
+		}
+	}
+	return strings.TrimSpace(b.String()), nil
 }
 
 // InstallOllama downloads and installs Ollama for the current OS in the

@@ -15,25 +15,23 @@ import (
 	"github.com/go-ducky/gui/internal/provider"
 	"github.com/go-ducky/gui/internal/session"
 	"github.com/go-ducky/gui/internal/setup"
-	"github.com/wailsapp/wails/v3/pkg/application"
 )
 
-// Event names emitted to the frontend. Callers use app.Emit(name, data).
+// Event names emitted to the UI via the event sink.
 const (
-	EvtStream     = "agent:stream"
-	EvtToolStart  = "agent:tool:start"
-	EvtToolEnd    = "agent:tool:end"
-	EvtStatus     = "agent:status"
-	EvtComplete   = "agent:complete"
-	EvtApproval   = "agent:approval"
-	EvtError      = "agent:error"
-	EvtOllamaOp   = "ollama:op"
-	EvtModels     = "models"
+	EvtStream    = "agent:stream"
+	EvtToolStart = "agent:tool:start"
+	EvtToolEnd   = "agent:tool:end"
+	EvtStatus    = "agent:status"
+	EvtComplete  = "agent:complete"
+	EvtApproval  = "agent:approval"
+	EvtError     = "agent:error"
+	EvtOllamaOp  = "ollama:op"
+	EvtModels    = "models"
 )
 
-// Service is the Wails-bound AppService for GoDucky GUI. It wraps the shared
-// agent runtime (the same one the CLI uses) behind methods the frontend calls
-// directly, and pushes streaming output to the UI via application events.
+// Service is the shared agent service for the GoDucky GUI. Native frontends
+// (GTK, Qt, …) install an event sink and call its methods directly.
 type Service struct {
 	mu      sync.Mutex
 	cfg     *config.Config
@@ -50,6 +48,10 @@ type Service struct {
 
 	approvalPending bool
 	approvalRespond chan bool
+
+	// sink, when set, receives UI events (installed by native frontends).
+	sinkMu sync.RWMutex
+	sink   func(name string, data any)
 }
 
 // NewService builds a Service that loads config/auth on construction.
@@ -65,20 +67,31 @@ func NewService() *Service {
 	return &Service{cfg: cfg, auth: auth}
 }
 
+// SetEventSink installs a UI event receiver for native frontends. Events are
+// dropped when no sink is set; native UIs always install one on startup.
+func (s *Service) SetEventSink(fn func(name string, data any)) {
+	s.sinkMu.Lock()
+	defer s.sinkMu.Unlock()
+	s.sink = fn
+}
+
 func (s *Service) emit(name string, data any) {
-	if app := application.Get(); app != nil {
-		app.Event.Emit(name, data)
+	s.sinkMu.RLock()
+	sink := s.sink
+	s.sinkMu.RUnlock()
+	if sink != nil {
+		sink(name, data)
 	}
 }
 
-// defaultWorkDir mirrors the CLI: chats and project files live in
-// ~/Documents/goducky everywhere.
+// defaultWorkDir mirrors the CLI: project files and chats live in
+// ~/Documents/GoDucky Projects on every platform (macOS and Windows included).
 func defaultWorkDir() string {
 	home, err := os.UserHomeDir()
 	if err != nil {
 		return agent.CurrentDir()
 	}
-	wd := filepath.Join(home, "Documents", "goducky")
+	wd := filepath.Join(home, "Documents", "GoDucky Projects")
 	if err := os.MkdirAll(wd, 0o755); err == nil {
 		return wd
 	}
@@ -87,13 +100,13 @@ func defaultWorkDir() string {
 
 // Info returns the current state snapshot the frontend needs on load.
 type Info struct {
-	Provider   string   `json:"provider"`
-	Model      string   `json:"model"`
-	WorkDir    string   `json:"work_dir"`
-	Onboarded  bool     `json:"onboarded"`
-	Name       string   `json:"name"`
-	Messages   []MsgView `json:"messages"`
-	Sessions   []SessionView `json:"sessions"`
+	Provider  string        `json:"provider"`
+	Model     string        `json:"model"`
+	WorkDir   string        `json:"work_dir"`
+	Onboarded bool          `json:"onboarded"`
+	Name      string        `json:"name"`
+	Messages  []MsgView     `json:"messages"`
+	Sessions  []SessionView `json:"sessions"`
 }
 
 // MsgView is a plain serializable view of a chat message for the frontend.

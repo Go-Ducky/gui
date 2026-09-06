@@ -18,7 +18,7 @@ import (
 )
 
 // Send starts a new agent turn with the given user prompt. It returns
-// immediately; streaming output is pushed to the frontend as events.
+// immediately; streaming output is pushed to the event sink.
 func (s *Service) Send(prompt string) error {
 	s.mu.Lock()
 	if s.running {
@@ -83,7 +83,7 @@ func (s *Service) IsRunning() bool {
 	return s.running
 }
 
-type approvalRequest struct {
+type ApprovalRequest struct {
 	ID   string         `json:"id"`
 	Desc string         `json:"desc"`
 	Args map[string]any `json:"args"`
@@ -98,7 +98,7 @@ func (s *Service) runAgent(a *agent.Agent, workDir string, cfg *config.Config, h
 		s.approvalPending = true
 		s.approvalRespond = ch
 		s.mu.Unlock()
-		s.emit(EvtApproval, approvalRequest{ID: id, Desc: approvalLabel(desc, args), Args: args})
+		s.emit(EvtApproval, ApprovalRequest{ID: id, Desc: approvalLabel(desc, args), Args: args})
 		select {
 		case ok := <-ch:
 			return ok
@@ -115,6 +115,7 @@ func (s *Service) runAgent(a *agent.Agent, workDir string, cfg *config.Config, h
 	s.running = false
 	s.approvalPending = false
 	s.approvalRespond = nil
+	s.autosaveLocked()
 	s.mu.Unlock()
 
 	if err != nil {
@@ -204,6 +205,8 @@ func approvalLabel(desc string, args map[string]any) string {
 }
 
 // SaveSession saves (or overwrites) the current chat under the given name.
+// SaveSession writes the current conversation to disk. An empty name gets a
+// generated one.
 func (s *Service) SaveSession(name string) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -215,11 +218,11 @@ func (s *Service) SaveSession(name string) error {
 		name = session.AutoName()
 	}
 	ss := &session.Session{
-		Name:      name,
-		Provider:  s.cfg.Provider,
-		Model:     provider.ResolveModel(s.cfg, ""),
-		WorkDir:   s.workDir,
-		Messages:  s.messages,
+		Name:     name,
+		Provider: s.cfg.Provider,
+		Model:    provider.ResolveModel(s.cfg, ""),
+		WorkDir:  s.workDir,
+		Messages: s.messages,
 	}
 	if err := session.Save(ss); err != nil {
 		return err
@@ -227,6 +230,28 @@ func (s *Service) SaveSession(name string) error {
 	s.sessionName = name
 	s.emit(EvtStatus, map[string]any{"msg": "Chat saved as " + name})
 	return nil
+}
+
+// autosaveLocked persists the current conversation without emitting events.
+// Must be called with s.mu held.
+func (s *Service) autosaveLocked() {
+	if len(s.messages) == 0 {
+		return
+	}
+	name := strings.TrimSpace(s.sessionName)
+	if name == "" {
+		name = session.AutoName()
+	}
+	ss := &session.Session{
+		Name:     name,
+		Provider: s.cfg.Provider,
+		Model:    provider.ResolveModel(s.cfg, ""),
+		WorkDir:  s.workDir,
+		Messages: s.messages,
+	}
+	if err := session.Save(ss); err == nil {
+		s.sessionName = name
+	}
 }
 
 // NewChat clears the current conversation, auto-saving it first if non-empty.
@@ -240,11 +265,11 @@ func (s *Service) NewChat() error {
 	}
 	// Auto-save the current chat before starting fresh.
 	ss := &session.Session{
-		Name:      s.sessionName,
-		Provider:  s.cfg.Provider,
-		Model:     provider.ResolveModel(s.cfg, ""),
-		WorkDir:   s.workDir,
-		Messages:  s.messages,
+		Name:     s.sessionName,
+		Provider: s.cfg.Provider,
+		Model:    provider.ResolveModel(s.cfg, ""),
+		WorkDir:  s.workDir,
+		Messages: s.messages,
 	}
 	if s.sessionName != "" {
 		s.messages = nil
@@ -400,6 +425,13 @@ func (s *Service) SetAutoApprove(on bool) error {
 	return s.cfg.Save()
 }
 
+// AutoApprove reports whether auto-approval is enabled.
+func (s *Service) AutoApprove() bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.cfg.Agent.AutoApprove
+}
+
 // SetConfigValue sets a dotted config key (like the CLI's /config).
 func (s *Service) SetConfigValue(key, value string) error {
 	if err := s.cfg.Set(key, value); err != nil {
@@ -447,13 +479,13 @@ func setAuthKey(a *config.Auth, prov, key string) {
 	}
 }
 
-// guiCallback streams agent activity to the frontend as Wails events.
+// guiCallback streams agent activity to the event sink (owned by the native UI).
 type guiCallback struct {
 	s *Service
 }
 
-func (c *guiCallback) OnText(text string)         { c.s.emit(EvtStream, map[string]any{"text": text}) }
-func (c *guiCallback) OnStatus(msg string)        { c.s.emit(EvtStatus, map[string]any{"msg": msg}) }
+func (c *guiCallback) OnText(text string)                           { c.s.emit(EvtStream, map[string]any{"text": text}) }
+func (c *guiCallback) OnStatus(msg string)                          { c.s.emit(EvtStatus, map[string]any{"msg": msg}) }
 func (c *guiCallback) OnComplete(resp string, usage provider.Usage) {}
 func (c *guiCallback) OnToolStart(name string, args json.RawMessage) {
 	c.s.emit(EvtToolStart, map[string]any{"name": name, "args": string(args)})

@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=GoDucky
+GenericName=AI coding agent
+Comment=AI coding agent chat, desktop edition
+Exec=goducky
+Icon=goducky
+Categories=Development;
+Terminal=false
+Version=1.0
+StartupNotify=false
