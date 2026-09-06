@@ -15,7 +15,13 @@ env:
 jobs:
   build:
     name: Build & vet
-    runs-on: ubuntu-25.04
+    runs-on: ubuntu-24.04
+    # Arch rolling image: glib exposes the symbols gotk4 needs as real
+    # functions (Ubuntu's glib 2.80 still ships them as macros that Go
+    # 1.24+'s stricter cgo cannot resolve).
+    container:
+      image: docker.io/library/archlinux:latest
+      options: --user root
     steps:
       - uses: actions/checkout@v4
 
@@ -25,12 +31,8 @@ jobs:
 
       - name: Install build dependencies (GTK4 + Qt 6)
         run: |
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends \
-            build-essential \
-            libgirepository1.0-dev \
-            libgtk-4-dev libgdk-pixbuf-2.0-dev \
-            qt6-base-dev libqt6widgets6
+          pacman -Syu --noconfirm --needed \
+            base-devel git glib2 gobject-introspection gtk4 qt6-base
 
       - name: Build (default)
         run: go build -o /tmp/goducky-default .

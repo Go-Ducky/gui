@@ -50,7 +50,13 @@ jobs:
   linux:
     name: Package Linux (GTK4)
     needs: version
-    runs-on: ubuntu-25.04
+    runs-on: ubuntu-24.04
+    # Arch rolling image: glib exposes the symbols gotk4 needs as real
+    # functions (Ubuntu's glib 2.80 still ships them as macros that Go
+    # 1.24+'s stricter cgo cannot resolve).
+    container:
+      image: docker.io/library/archlinux:latest
+      options: --user root
     steps:
       - uses: actions/checkout@v4
 
@@ -60,11 +66,8 @@ jobs:
 
       - name: Install GTK4 build dependencies
         run: |
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends \
-            build-essential \
-            libgirepository1.0-dev \
-            libgtk-4-dev libgdk-pixbuf-2.0-dev
+          pacman -Syu --noconfirm --needed \
+            base-devel git glib2 gobject-introspection gtk4
 
       - name: Build native GTK4 binary
         run: |
