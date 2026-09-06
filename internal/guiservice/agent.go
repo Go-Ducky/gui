@@ -390,7 +390,7 @@ func (s *Service) HasAPIKey(providerName string) bool {
 	case "gemini":
 		akey, env = s.auth.GeminiAPIKey, s.cfg.Gemini.EnvKey
 	}
-	return akey != "" || (env != "" && env != "" && os.Getenv(env) != "")
+	return akey != "" || (env != "" && os.Getenv(env) != "")
 }
 
 // SetAutoApprove toggles auto-approval of file/command actions.
