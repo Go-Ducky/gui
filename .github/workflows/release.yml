@@ -119,7 +119,6 @@ jobs:
           EOF
           nfpm pkg --config /tmp/nfpm.yaml --target "dist/goducky_${VERSION}_amd64.deb" --packager deb
           nfpm pkg --config /tmp/nfpm.yaml --target "dist/goducky-${VERSION}-1.x86_64.rpm" --packager rpm
-          nfpm pkg --config /tmp/nfpm.yaml --target "dist/goducky-${VERSION}-1-x86_64.pkg.tar.zst" --packager arch
           ls -la dist
         env:
           VERSION: ${{ needs.version.outputs.version }}
