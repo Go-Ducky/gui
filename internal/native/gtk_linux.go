@@ -58,7 +58,6 @@ type gtkApp struct {
 	streamBuf strings.Builder
 }
 
-// RunGTK launches the native GTK4 interface and returns the process exit code.
 func RunGTK() int {
 	app := gtk.NewApplication("dev.goducky.gui", gio.ApplicationFlagsNone)
 	g := &gtkApp{app: app, theme: "system"}
@@ -88,7 +87,6 @@ func (g *gtkApp) build() {
 	g.rootBox.SetCSSClasses([]string{"go-ducky-root", "go-light"})
 	g.win.SetChild(g.rootBox)
 
-	// ---------- sidebar ----------
 	sidebar := gtk.NewBox(gtk.OrientationVertical, 6)
 	sidebar.SetSizeRequest(270, -1)
 	sidebar.SetMarginStart(10)
@@ -142,7 +140,6 @@ func (g *gtkApp) build() {
 
 	g.rootBox.Append(sidebar)
 
-	// ---------- main column ----------
 	main := gtk.NewBox(gtk.OrientationVertical, 0)
 	main.SetHExpand(true)
 	main.SetVExpand(true)
@@ -181,7 +178,6 @@ func (g *gtkApp) build() {
 
 	main.Append(gtk.NewSeparator(gtk.OrientationHorizontal))
 
-	// chat area
 	g.chat = gtk.NewTextView()
 	g.chat.SetEditable(false)
 	g.chat.SetCursorVisible(true)
@@ -198,7 +194,6 @@ func (g *gtkApp) build() {
 	chatScroller.SetHExpand(true)
 	main.Append(chatScroller)
 
-	// thinking row
 	g.thinkingRow = gtk.NewBox(gtk.OrientationHorizontal, 8)
 	g.thinkingRow.SetMarginStart(24)
 	g.thinkingRow.SetMarginTop(4)
@@ -211,7 +206,6 @@ func (g *gtkApp) build() {
 	g.thinkingRow.SetVisible(false)
 	main.Append(g.thinkingRow)
 
-	// composer
 	composerWrap := gtk.NewBox(gtk.OrientationVertical, 6)
 	composerWrap.SetMarginStart(14)
 	composerWrap.SetMarginEnd(14)
@@ -258,7 +252,6 @@ func (g *gtkApp) build() {
 	main.Append(composerWrap)
 	g.rootBox.Append(main)
 
-	// Enter to send
 	ctrl := gtk.NewEventControllerKey()
 	ctrl.ConnectKeyPressed(func(keyval, keycode uint, state gdk.ModifierType) bool {
 		if (keyval == gdk.KEY_Return || keyval == gdk.KEY_KP_Enter) && state&gdk.ShiftMask == 0 {
@@ -318,7 +311,6 @@ func (g *gtkApp) scrollToEnd() {
 	g.chat.ScrollToIter(g.chatBuf.EndIter(), 0.0, false, 0.0, 0.0)
 }
 
-// renderChat redraws the whole conversation, styled with Pango markup.
 func (g *gtkApp) renderChat() {
 	buf := g.chatBuf
 	buf.Delete(buf.StartIter(), buf.EndIter())
@@ -429,7 +421,6 @@ func (g *gtkApp) newSessionRow(s guiservice.SessionView) *gtk.ListBoxRow {
 	return row
 }
 
-// consumeEvents drains engine events and marshals them onto the GTK main loop.
 func (g *gtkApp) consumeEvents() {
 	for ev := range g.eng.Events() {
 		switch ev.Name {
@@ -483,8 +474,6 @@ func (g *gtkApp) consumeEvents() {
 	}
 }
 
-// ---------- actions ----------
-
 func (g *gtkApp) shareActive() {
 	if err := g.eng.ShareSession(g.activeName); err != nil {
 		g.setStatus("Share failed: " + err.Error())
@@ -500,8 +489,6 @@ func (g *gtkApp) saveActive() {
 	}
 	g.setStatus("Saved")
 }
-
-// ---------- dialogs ----------
 
 func (g *gtkApp) dialog(title string, w, h int, content gtk.Widgetter) *gtk.Window {
 	wnd := gtk.NewWindow()
@@ -587,8 +574,6 @@ func (g *gtkApp) showApproval(req guiservice.ApprovalRequest) {
 	deny.ConnectClicked(func() { wnd.Close() })
 	allow.ConnectClicked(func() { wnd.Close() })
 }
-
-// ---------- settings ----------
 
 func (g *gtkApp) showSettings() {
 	content := gtk.NewBox(gtk.OrientationVertical, 12)
@@ -694,8 +679,6 @@ func (g *gtkApp) showApiKey() {
 	cancel.ConnectClicked(func() { wnd.Close() })
 	ok.ConnectClicked(func() { wnd.Close() })
 }
-
-// ---------- onboarding ----------
 
 func (g *gtkApp) showOnboarding() {
 	content := gtk.NewBox(gtk.OrientationVertical, 12)
@@ -834,8 +817,6 @@ func (g *gtkApp) showOnboardingCloud() {
 	})
 	cont.ConnectClicked(func() { wnd.Close() })
 }
-
-// ---------- theme ----------
 
 func (g *gtkApp) cycleTheme() {
 	order := []string{"system", "light", "dark"}

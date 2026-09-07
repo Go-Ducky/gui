@@ -10,9 +10,6 @@ import (
 	"time"
 )
 
-// ValidateAPIKey checks a key against the provider's own endpoint so users get
-// immediate feedback at `--login` / onboarding instead of confusing failures
-// later. It returns nil if the key is accepted by the provider.
 func ValidateAPIKey(name, key string) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
@@ -35,7 +32,7 @@ func ValidateAPIKey(name, key string) error {
 	case "openrouter":
 		err = checkBearer(ctx, "https://openrouter.ai/api/v1/auth/key", key)
 	default:
-		return nil // nothing to check for unknown/local providers
+		return nil
 	}
 	if err == nil {
 		return nil

@@ -14,10 +14,6 @@ import (
 	"github.com/go-ducky/gui/internal/config"
 )
 
-// OpenAI is a provider for any OpenAI-compatible chat completions endpoint.
-// When compatible is true, it uses the /chat/completions style endpoint with
-// tools support — this covers OpenAI, OpenRouter, Groq, LM Studio, LocalAI,
-// vLLM and many other self-hosted backends.
 type OpenAI struct {
 	baseURL    string
 	apiKey     string
@@ -27,9 +23,6 @@ type OpenAI struct {
 	client     *http.Client
 }
 
-// NewOpenAI creates an OpenAI-compatible provider from config and auth.
-// If compatible is true, the provider also supports custom base URLs
-// (used by self-hosted / OpenAI-compatible servers) via env var.
 func NewOpenAI(cfg *config.Config, auth *config.Auth, compatible bool) *OpenAI {
 	apiKey := cfg.OpenAI.APIKey
 	if apiKey == "" && auth != nil {
@@ -365,7 +358,6 @@ func (o *OpenAI) streamChat(ctx context.Context, httpReq *http.Request, payload 
 	return &ChatResponse{Usage: usage}, nil
 }
 
-// deltaString extracts a non-empty string from an OpenAI delta content value.
 func deltaString(v any) string {
 	switch t := v.(type) {
 	case string:
@@ -377,7 +369,6 @@ func deltaString(v any) string {
 	}
 }
 
-// openAIToMessage converts an OpenAI message into our Message type.
 func openAIToMessage(m openAIChatMessage) Message {
 	var blocks []ContentBlock
 	if m.Content != nil {
@@ -402,7 +393,6 @@ func openAIToMessage(m openAIChatMessage) Message {
 	return Message{Role: RoleAssistant, Content: blocks}
 }
 
-// ListModels lists models for OpenAI-compatible endpoints that support it.
 func (o *OpenAI) ListModels(ctx context.Context) ([]string, error) {
 	url := strings.TrimRight(o.baseURL, "/") + "/models"
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
@@ -416,7 +406,7 @@ func (o *OpenAI) ListModels(ctx context.Context) ([]string, error) {
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
-		return nil, nil // models listing unsupported
+		return nil, nil
 	}
 	var out struct {
 		Data []struct {

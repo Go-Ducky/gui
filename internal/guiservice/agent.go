@@ -17,8 +17,6 @@ import (
 	"github.com/go-ducky/gui/internal/setup"
 )
 
-// Send starts a new agent turn with the given user prompt. It returns
-// immediately; streaming output is pushed to the event sink.
 func (s *Service) Send(prompt string) error {
 	s.mu.Lock()
 	if s.running {
@@ -37,10 +35,8 @@ func (s *Service) Send(prompt string) error {
 	cfg := s.cfg
 	workDir := s.workDir
 
-	// Seed the config for a fresh agent build if the user never started.
 	s.mu.Unlock()
 
-	// Append the user message locally.
 	s.mu.Lock()
 	s.messages = append(s.messages, provider.NewTextMessage(provider.RoleUser, prompt))
 	s.running = true
@@ -48,7 +44,7 @@ func (s *Service) Send(prompt string) error {
 	s.runCtx = ctx
 	s.cancelRun = cancel
 	s.mu.Unlock()
-	// Ensure agent picks up settings like auto-approve at run time.
+
 	s.setAutoApprove()
 
 	history := make([]provider.Message, len(s.messages))
@@ -66,7 +62,6 @@ func (s *Service) setAutoApprove() {
 	}
 }
 
-// Stop cancels the in-flight agent turn.
 func (s *Service) Stop() {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -76,7 +71,6 @@ func (s *Service) Stop() {
 	}
 }
 
-// IsRunning reports whether an agent turn is in progress.
 func (s *Service) IsRunning() bool {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -129,7 +123,6 @@ func (s *Service) runAgent(a *agent.Agent, workDir string, cfg *config.Config, h
 	s.emit(EvtComplete, map[string]any{"stopped": false, "text": result})
 }
 
-// Approve answers a pending tool-approval prompt.
 func (s *Service) Approve(id string, ok bool) bool {
 	s.mu.Lock()
 	ch := s.approvalRespond
@@ -145,7 +138,6 @@ func (s *Service) Approve(id string, ok bool) bool {
 	}
 }
 
-// OllamaStatus reports whether the Ollama server is installed and running.
 func (s *Service) OllamaStatus() map[string]any {
 	return map[string]any{
 		"installed": setup.IsOllamaInstalled(),
@@ -153,7 +145,6 @@ func (s *Service) OllamaStatus() map[string]any {
 	}
 }
 
-// PullModel pulls (downloads) a model through Ollama in the background.
 func (s *Service) PullModel(model string) {
 	go func() {
 		o := provider.NewOllama(s.cfg)
@@ -162,7 +153,6 @@ func (s *Service) PullModel(model string) {
 	}()
 }
 
-// RemoveModel removes a locally pulled Ollama model.
 func (s *Service) RemoveModel(model string) {
 	go func() {
 		o := provider.NewOllama(s.cfg)
@@ -178,7 +168,6 @@ func errString(err error) string {
 	return err.Error()
 }
 
-// HasModel checks whether the given Ollama model is already pulled.
 func (s *Service) HasModel(model string) bool {
 	o := provider.NewOllama(s.cfg)
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
@@ -204,9 +193,6 @@ func approvalLabel(desc string, args map[string]any) string {
 	return sb.String()
 }
 
-// SaveSession saves (or overwrites) the current chat under the given name.
-// SaveSession writes the current conversation to disk. An empty name gets a
-// generated one.
 func (s *Service) SaveSession(name string) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -232,8 +218,6 @@ func (s *Service) SaveSession(name string) error {
 	return nil
 }
 
-// autosaveLocked persists the current conversation without emitting events.
-// Must be called with s.mu held.
 func (s *Service) autosaveLocked() {
 	if len(s.messages) == 0 {
 		return
@@ -254,7 +238,6 @@ func (s *Service) autosaveLocked() {
 	}
 }
 
-// NewChat clears the current conversation, auto-saving it first if non-empty.
 func (s *Service) NewChat() error {
 	s.mu.Lock()
 	if len(s.messages) == 0 {
@@ -263,7 +246,7 @@ func (s *Service) NewChat() error {
 		s.mu.Unlock()
 		return nil
 	}
-	// Auto-save the current chat before starting fresh.
+
 	ss := &session.Session{
 		Name:     s.sessionName,
 		Provider: s.cfg.Provider,
@@ -286,7 +269,6 @@ func (s *Service) NewChat() error {
 	return nil
 }
 
-// ListSessions returns the saved chats, newest first.
 func (s *Service) ListSessions() []SessionView {
 	ss, err := session.List()
 	if err != nil {
@@ -295,7 +277,6 @@ func (s *Service) ListSessions() []SessionView {
 	return buildSessionViews(ss)
 }
 
-// Resume loads a saved chat into the working conversation.
 func (s *Service) Resume(nameOrNum string) error {
 	ss, err := session.Load(nameOrNum)
 	if err != nil {
@@ -328,7 +309,6 @@ func (s *Service) Resume(nameOrNum string) error {
 	return nil
 }
 
-// RenameSession renames a saved chat.
 func (s *Service) RenameSession(oldName, newName string) error {
 	if err := session.Rename(oldName, newName); err != nil {
 		return err
@@ -341,7 +321,6 @@ func (s *Service) RenameSession(oldName, newName string) error {
 	return nil
 }
 
-// DeleteSession deletes a saved chat.
 func (s *Service) DeleteSession(name string) error {
 	ss, err := session.Load(name)
 	if err != nil {
@@ -360,7 +339,6 @@ func (s *Service) DeleteSession(name string) error {
 	return os.Remove(path)
 }
 
-// SaveAPIKey validates and saves an API key for a provider, then switches to it.
 func (s *Service) SaveAPIKey(providerName, key string) error {
 	providerName = strings.ToLower(strings.TrimSpace(providerName))
 	key = strings.TrimSpace(key)
@@ -398,7 +376,6 @@ func (s *Service) SaveAPIKey(providerName, key string) error {
 	return nil
 }
 
-// HasAPIKey reports whether a key is available for the provider.
 func (s *Service) HasAPIKey(providerName string) bool {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -418,21 +395,18 @@ func (s *Service) HasAPIKey(providerName string) bool {
 	return akey != "" || (env != "" && os.Getenv(env) != "")
 }
 
-// SetAutoApprove toggles auto-approval of file/command actions.
 func (s *Service) SetAutoApprove(on bool) error {
 	s.cfg.Agent.AutoApprove = on
 	s.setAutoApprove()
 	return s.cfg.Save()
 }
 
-// AutoApprove reports whether auto-approval is enabled.
 func (s *Service) AutoApprove() bool {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	return s.cfg.Agent.AutoApprove
 }
 
-// SetConfigValue sets a dotted config key (like the CLI's /config).
 func (s *Service) SetConfigValue(key, value string) error {
 	if err := s.cfg.Set(key, value); err != nil {
 		return err
@@ -446,7 +420,6 @@ func (s *Service) SetConfigValue(key, value string) error {
 	return nil
 }
 
-// ApplySetup finishes the first-run wizard: mark onboarded, save config, init agent.
 func (s *Service) ApplySetup() error {
 	s.mu.Lock()
 	s.cfg.Onboarded = true
@@ -456,7 +429,6 @@ func (s *Service) ApplySetup() error {
 	return nil
 }
 
-// EnsureOllamaModel pulls a model through Ollama if it isn't local yet.
 func (s *Service) EnsureOllamaModel(model string) {
 	if s.HasModel(model) {
 		return
@@ -479,7 +451,6 @@ func setAuthKey(a *config.Auth, prov, key string) {
 	}
 }
 
-// guiCallback streams agent activity to the event sink (owned by the native UI).
 type guiCallback struct {
 	s *Service
 }

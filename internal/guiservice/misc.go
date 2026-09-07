@@ -13,13 +13,10 @@ import (
 	"github.com/go-ducky/gui/internal/setup"
 )
 
-// Version is the app version, set at build time via -ldflags.
 var Version = "0.1.0"
 
-// AppVersion returns the GoDucky GUI version.
 func (s *Service) AppVersion() string { return Version }
 
-// OpenURL opens a URL in the system browser.
 func (s *Service) OpenURL(url string) error {
 	var cmd *exec.Cmd
 	switch runtime.GOOS {
@@ -36,7 +33,6 @@ func (s *Service) OpenURL(url string) error {
 	return nil
 }
 
-// CopyText copies plain text to the system clipboard (used by share/export).
 func (s *Service) CopyText(text string) error {
 	if strings.TrimSpace(text) == "" {
 		return errors.New("nothing to copy")
@@ -61,8 +57,6 @@ func (s *Service) CopyText(text string) error {
 	return nil
 }
 
-// ShareSession copies a saved (or the current) conversation to the clipboard
-// as a Markdown transcript. An empty name shares the active chat.
 func (s *Service) ShareSession(name string) error {
 	md, err := s.sessionMarkdown(name)
 	if err != nil {
@@ -110,8 +104,6 @@ func (s *Service) sessionMarkdown(name string) (string, error) {
 	return strings.TrimSpace(b.String()), nil
 }
 
-// InstallOllama downloads and installs Ollama for the current OS in the
-// background, streaming status updates as events.
 func (s *Service) InstallOllama() {
 	go func() {
 		status := func(msg string) {
@@ -124,12 +116,10 @@ func (s *Service) InstallOllama() {
 	}()
 }
 
-// RecommendedLocalModels lists the curated local model shortlist.
 func (s *Service) RecommendedLocalModels() []string {
 	return setup.RecommendedModelIDs()
 }
 
-// StartLocalModelPulls starts pulling each of the given models through Ollama.
 func (s *Service) StartLocalModelPulls(models []string) {
 	for _, m := range models {
 		if s.HasModel(m) {

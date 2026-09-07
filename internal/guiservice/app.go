@@ -17,7 +17,6 @@ import (
 	"github.com/go-ducky/gui/internal/setup"
 )
 
-// Event names emitted to the UI via the event sink.
 const (
 	EvtStream    = "agent:stream"
 	EvtToolStart = "agent:tool:start"
@@ -30,8 +29,6 @@ const (
 	EvtModels    = "models"
 )
 
-// Service is the shared agent service for the GoDucky GUI. Native frontends
-// (GTK, Qt, …) install an event sink and call its methods directly.
 type Service struct {
 	mu      sync.Mutex
 	cfg     *config.Config
@@ -49,12 +46,10 @@ type Service struct {
 	approvalPending bool
 	approvalRespond chan bool
 
-	// sink, when set, receives UI events (installed by native frontends).
 	sinkMu sync.RWMutex
 	sink   func(name string, data any)
 }
 
-// NewService builds a Service that loads config/auth on construction.
 func NewService() *Service {
 	cfg, err := config.Load()
 	if err != nil {
@@ -67,8 +62,6 @@ func NewService() *Service {
 	return &Service{cfg: cfg, auth: auth}
 }
 
-// SetEventSink installs a UI event receiver for native frontends. Events are
-// dropped when no sink is set; native UIs always install one on startup.
 func (s *Service) SetEventSink(fn func(name string, data any)) {
 	s.sinkMu.Lock()
 	defer s.sinkMu.Unlock()
@@ -84,8 +77,6 @@ func (s *Service) emit(name string, data any) {
 	}
 }
 
-// defaultWorkDir mirrors the CLI: project files and chats live in
-// ~/Documents/GoDucky Projects on every platform (macOS and Windows included).
 func defaultWorkDir() string {
 	home, err := os.UserHomeDir()
 	if err != nil {
@@ -98,7 +89,6 @@ func defaultWorkDir() string {
 	return agent.CurrentDir()
 }
 
-// Info returns the current state snapshot the frontend needs on load.
 type Info struct {
 	Provider  string        `json:"provider"`
 	Model     string        `json:"model"`
@@ -109,13 +99,11 @@ type Info struct {
 	Sessions  []SessionView `json:"sessions"`
 }
 
-// MsgView is a plain serializable view of a chat message for the frontend.
 type MsgView struct {
-	Role string `json:"role"` // user | assistant | system
+	Role string `json:"role"`
 	Text string `json:"text"`
 }
 
-// SessionView is a plain serializable summary of a saved session.
 type SessionView struct {
 	Name     string `json:"name"`
 	Provider string `json:"provider"`
@@ -155,7 +143,6 @@ func preview(msgs []provider.Message) string {
 	return ""
 }
 
-// GetInfo fetches config + auth + sessions all at once.
 func (s *Service) GetInfo() *Info {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -194,7 +181,6 @@ func msgsToView(msgs []provider.Message) []MsgView {
 	return out
 }
 
-// initAgent (re)builds the agent backend from the current cfg+auth.
 func (s *Service) initAgent() {
 	if s.workDir == "" {
 		s.workDir = defaultWorkDir()
@@ -215,7 +201,6 @@ func (s *Service) initAgent() {
 	s.agent = a
 }
 
-// SetWorkDir changes the working directory (creates it if needed).
 func (s *Service) SetWorkDir(dir string) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -232,7 +217,6 @@ func (s *Service) SetWorkDir(dir string) error {
 	return nil
 }
 
-// GetModels lists models for a provider (live where possible, else curated).
 func (s *Service) GetModels(providerName string) []string {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -303,12 +287,10 @@ func curatedModels(prov string) []string {
 	return setup.RecommendedModelIDs()
 }
 
-// Providers lists the supported provider names.
 func (s *Service) Providers() []string {
 	return []string{"ollama", "groq", "openai", "openai_compatible", "anthropic", "gemini", "openrouter"}
 }
 
-// SwitchProvider sets the active provider (does not require a key for ollama).
 func (s *Service) SwitchProvider(name string) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -330,7 +312,6 @@ func (s *Service) SwitchProvider(name string) error {
 	return nil
 }
 
-// SetModel sets a model for the active provider.
 func (s *Service) SetModel(name string) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()

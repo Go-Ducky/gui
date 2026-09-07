@@ -44,7 +44,6 @@ type qtApp struct {
 	pending []Event
 }
 
-// qwidgetOf returns the embedded *qt6.QWidget for common widget types.
 func qwidgetOf(v any) *qt6.QWidget {
 	switch t := v.(type) {
 	case *qt6.QWidget:
@@ -75,7 +74,6 @@ func qwidgetOf(v any) *qt6.QWidget {
 	return nil
 }
 
-// RunQt launches the native Qt 6 interface and returns the app exit code.
 func RunQt() int {
 	qt6.NewQApplication(os.Args)
 	q := &qtApp{theme: "system"}
@@ -117,7 +115,6 @@ func (q *qtApp) build() {
 
 	splitter := qt6.NewQSplitter3(qt6.Horizontal)
 
-	// ---------- sidebar ----------
 	sidebar := qt6.NewQWidget2()
 	vb := qt6.NewQBoxLayout2(qt6.QBoxLayout__TopToBottom, sidebar)
 	vb.SetContentsMargins(6, 8, 6, 6)
@@ -167,7 +164,6 @@ func (q *qtApp) build() {
 
 	splitter.AddWidget(qwidgetOf(sidebar))
 
-	// ---------- main column ----------
 	main := qt6.NewQWidget2()
 	ml := qt6.NewQBoxLayout2(qt6.QBoxLayout__TopToBottom, main)
 	ml.SetContentsMargins(10, 10, 10, 6)
@@ -344,7 +340,6 @@ func (q *qtApp) reload() {
 	q.setRunning(q.eng.IsRunning())
 }
 
-// drain processes engine events on the Qt main thread.
 func (q *qtApp) drain() {
 	q.mu.Lock()
 	evs := q.pending
@@ -408,8 +403,6 @@ func (q *qtApp) ensureStreamingMsg() {
 	q.messages[len(q.messages)-1].Text = q.streamText
 }
 
-// ---------- actions ----------
-
 func (q *qtApp) shareActive() {
 	if err := q.eng.ShareSession(q.activeName); err != nil {
 		q.status("Share failed: " + err.Error())
@@ -459,8 +452,6 @@ func (q *qtApp) showApproval(req guiservice.ApprovalRequest) {
 	q.eng.Approve(req.ID, btn == int(qt6.QMessageBox__Yes))
 }
 
-// ---------- theme ----------
-
 func (q *qtApp) cycleTheme() {
 	opts := []string{"light", "dark", "system"}
 	idx := 0
@@ -492,8 +483,6 @@ func (q *qtApp) applyTheme() {
 		q.stopBtn.SetStyleSheet(`QPushButton{background:#141414;color:#ffffff;border-radius:18px;padding:8px 16px;font-weight:bold;}QPushButton:disabled{background:#ccc;color:#888;}`)
 	}
 }
-
-// ---------- settings ----------
 
 func (q *qtApp) showSettings() {
 	dia := qt6.NewQDialog2()
