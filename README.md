@@ -1,4 +1,4 @@
-# GoDucky GUI 🦆
+# GoDucky GUI (BETA)
 
 The desktop edition of [GoDucky](https://github.com/Go-Ducky/cli) — an AI coding
 agent that reads, writes, edits, searches, and runs commands in a project folder.
