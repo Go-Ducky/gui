@@ -407,6 +407,12 @@ func (s *Service) AutoApprove() bool {
 	return s.cfg.Agent.AutoApprove
 }
 
+func (s *Service) GetTheme() string {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.cfg.PreferredTheme()
+}
+
 func (s *Service) SetConfigValue(key, value string) error {
 	if err := s.cfg.Set(key, value); err != nil {
 		return err

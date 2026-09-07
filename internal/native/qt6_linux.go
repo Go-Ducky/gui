@@ -39,6 +39,7 @@ type qtApp struct {
 	streamText string
 	theme      string
 	reloading  bool
+	pal        *qt6.QPalette
 
 	mu      sync.Mutex
 	pending []Event
@@ -108,6 +109,7 @@ func escapeHTML(s string) string {
 func (q *qtApp) build() {
 	q.eng = New()
 	q.providers = q.eng.Providers()
+	q.theme = q.eng.GetTheme()
 
 	q.win = qt6.NewQMainWindow2()
 	q.win.SetWindowTitle("GoDucky")
@@ -462,6 +464,7 @@ func (q *qtApp) cycleTheme() {
 		}
 	}
 	q.theme = opts[(idx+1)%len(opts)]
+	_ = q.eng.SetConfigValue("theme", q.theme)
 	q.applyTheme()
 	q.status("Theme: " + q.theme)
 }
@@ -475,6 +478,15 @@ func (q *qtApp) applyTheme() {
 			effective = "light"
 		}
 	}
+	if q.pal == nil {
+		q.pal = qt6.NewQPalette()
+	}
+	if effective == "dark" {
+		q.applyPalette(0x1e1f22, 0x26272b, 0x2e3035, 0xe6e7e8, 0x2b2c30, 0x3d7eff)
+	} else {
+		q.applyPalette(0xffffff, 0xffffff, 0xf7f8f9, 0x1a1a1a, 0xf2f3f4, 0x3d7eff)
+	}
+	qt6.QApplication_SetPalette(q.pal)
 	if effective == "dark" {
 		q.sendBtn.SetStyleSheet(`QPushButton{background:#ffffff;color:#1a1a1a;border-radius:18px;padding:8px 16px;font-weight:bold;}QPushButton:disabled{background:#444;color:#999;}`)
 		q.stopBtn.SetStyleSheet(`QPushButton{background:#ffffff;color:#1a1a1a;border-radius:18px;padding:8px 16px;font-weight:bold;}QPushButton:disabled{background:#444;color:#999;}`)
@@ -482,6 +494,23 @@ func (q *qtApp) applyTheme() {
 		q.sendBtn.SetStyleSheet(`QPushButton{background:#141414;color:#ffffff;border-radius:18px;padding:8px 16px;font-weight:bold;}QPushButton:disabled{background:#ccc;color:#888;}`)
 		q.stopBtn.SetStyleSheet(`QPushButton{background:#141414;color:#ffffff;border-radius:18px;padding:8px 16px;font-weight:bold;}QPushButton:disabled{background:#ccc;color:#888;}`)
 	}
+}
+
+func (q *qtApp) applyPalette(window, base, alt, text, button, highlight uint32) {
+	set := func(cr qt6.QPalette__ColorRole, rgb uint32) {
+		q.pal.SetColor(qt6.QPalette__All, cr, qt6.NewQColor3(int((rgb>>16)&0xff), int((rgb>>8)&0xff), int(rgb&0xff)))
+	}
+	set(qt6.QPalette__Window, window)
+	set(qt6.QPalette__WindowText, text)
+	set(qt6.QPalette__Base, base)
+	set(qt6.QPalette__AlternateBase, alt)
+	set(qt6.QPalette__Text, text)
+	set(qt6.QPalette__Button, button)
+	set(qt6.QPalette__ButtonText, text)
+	set(qt6.QPalette__Highlight, highlight)
+	set(qt6.QPalette__HighlightedText, 0xffffff)
+	set(qt6.QPalette__ToolTipBase, base)
+	set(qt6.QPalette__ToolTipText, text)
 }
 
 func (q *qtApp) showSettings() {

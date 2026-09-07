@@ -15,6 +15,7 @@ type Config struct {
 	Onboarded  bool            `json:"onboarded"`
 	Provider   string          `json:"provider"`
 	Model      string          `json:"model"`
+	Theme      string          `json:"theme"`
 	Ollama     OllamaConfig    `json:"ollama"`
 	Groq       GroqConfig      `json:"groq"`
 	OpenAI     OpenAIConfig    `json:"openai"`
@@ -186,6 +187,13 @@ func ValidProvider(name string) bool {
 	return false
 }
 
+func (c *Config) PreferredTheme() string {
+	if c.Theme == "" {
+		return "system"
+	}
+	return c.Theme
+}
+
 func (c *Config) Set(key, value string) error {
 	switch key {
 	case "provider":
@@ -243,6 +251,17 @@ func (c *Config) Set(key, value string) error {
 			}
 		}
 		c.Agent.ExcludeDirs = dirs
+	case "theme", "ui.theme":
+		switch strings.ToLower(strings.TrimSpace(value)) {
+		case "", "system", "light", "dark":
+			if t := strings.ToLower(strings.TrimSpace(value)); t == "" {
+				c.Theme = "system"
+			} else {
+				c.Theme = t
+			}
+		default:
+			return fmt.Errorf("theme expects system, light, or dark, got %q", value)
+		}
 	default:
 		return fmt.Errorf("unknown config key %q (try /config to list keys)", key)
 	}

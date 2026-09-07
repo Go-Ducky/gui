@@ -54,6 +54,7 @@ type gtkApp struct {
 	running    bool
 	version    string
 	theme      string
+	systemDark bool
 
 	streamBuf strings.Builder
 }
@@ -76,6 +77,12 @@ func escapeMarkup(s string) string {
 func (g *gtkApp) build() {
 	g.eng = New()
 	g.version = g.eng.AppVersion()
+	g.theme = g.eng.GetTheme()
+	if s := gtk.SettingsGetDefault(); s != nil {
+		if v, ok := s.ObjectProperty("gtk-application-prefer-dark-theme").(bool); ok {
+			g.systemDark = v
+		}
+	}
 
 	applyCss()
 
@@ -86,6 +93,7 @@ func (g *gtkApp) build() {
 	g.rootBox = gtk.NewBox(gtk.OrientationHorizontal, 0)
 	g.rootBox.SetCSSClasses([]string{"go-ducky-root", "go-light"})
 	g.win.SetChild(g.rootBox)
+	g.applyTheme()
 
 	sidebar := gtk.NewBox(gtk.OrientationVertical, 6)
 	sidebar.SetSizeRequest(270, -1)
@@ -828,6 +836,12 @@ func (g *gtkApp) cycleTheme() {
 		}
 	}
 	g.theme = next
+	_ = g.eng.SetConfigValue("theme", g.theme)
+	g.applyTheme()
+	g.setStatus("Theme: " + g.theme)
+}
+
+func (g *gtkApp) applyTheme() {
 	classes := []string{"go-ducky-root"}
 	switch g.theme {
 	case "dark":
@@ -836,7 +850,14 @@ func (g *gtkApp) cycleTheme() {
 		classes = append(classes, "go-light")
 	}
 	g.rootBox.SetCSSClasses(classes)
-	g.setStatus("Theme: " + g.theme)
+
+	preferDark := g.theme == "dark"
+	if g.theme == "system" {
+		preferDark = g.systemDark
+	}
+	if s := gtk.SettingsGetDefault(); s != nil {
+		s.SetObjectProperty("gtk-application-prefer-dark-theme", preferDark)
+	}
 }
 
 func applyCss() {
