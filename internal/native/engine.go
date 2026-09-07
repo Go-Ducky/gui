@@ -66,3 +66,10 @@ func indexOf(needle string, hay []string, fallback int) int {
 	}
 	return 0
 }
+
+func boolToInt(b bool) int {
+	if b {
+		return 1
+	}
+	return 0
+}
